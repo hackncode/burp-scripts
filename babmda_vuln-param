@@ -1,0 +1,82 @@
+// Lists of common vulnerable parameters
+
+// Parameters potentially vulnerable to Server-Side Request Forgery (SSRF) attacks
+String[] ssrfParams = {
+    "dest=", "redirect=", "uri=", "path=", "continue=", "url=", "window=", 
+    "next=", "data=", "reference=", "site=", "html=", "val=", "validate=", 
+    "domain=", "callback=", "return=", "page=", "feed=", "host=", "port=", 
+    "to=", "out=", "view=", "dir=", "link=", "forward=", "req=", "service=", 
+    "resource="
+};
+
+// Parameters potentially vulnerable to SQL Injection attacks
+String[] sqlParams = {
+    "id=", "page=", "report=", "dir=", "search=", "category=", "file=", "class=", 
+    "url=", "news=", "item=", "menu=", "lang=", "name=", "ref=", "title=", "view=", 
+    "topic=", "thread=", "type=", "date=", "form=", "main=", "nav=", "region=", 
+    "action=", "cmd=", "query=", "order=", "filter="
+};
+
+// Parameters potentially vulnerable to Cross-Site Scripting (XSS) attacks
+String[] xssParams = {
+    "q=", "s=", "search=", "id=", "lang=", "keyword=", "query=", "page=", 
+    "keywords=", "year=", "view=", "email=", "type=", "name=", "p=", "month=", 
+    "image=", "list_type=", "url=", "terms=", "categoryid=", "key=", "l=", 
+    "begindate=", "enddate=", "text=", "comment=", "message=", "content=", "desc="
+};
+
+// Parameters potentially vulnerable to Local File Inclusion (LFI) attacks
+String[] lfiParams = {
+    "cat=", "dir=", "action=", "board=", "date=", "detail=", "file=", "download=", 
+    "path=", "folder=", "prefix=", "include=", "page=", "inc=", "locate=", "show=", 
+    "doc=", "site=", "type=", "view=", "content=", "document=", "layout=", "mod=", 
+    "conf=", "template=", "theme=", "style=", "skin="
+};
+
+// Parameters potentially vulnerable to Open Redirect (OR) attacks
+String[] orParams = {
+    "next=", "url=", "target=", "rurl=", "dest=", "destination=", "redir=", 
+    "redirect_uri=", "redirect_url=", "redirect=", "out=", "view=", "to=", 
+    "image_url=", "go=", "return=", "returnTo=", "return_to=", "checkout_url=", 
+    "continue=", "return_path=", "callback=", "forward=", "nav=", "path=", 
+    "exit=", "location=", "href=", "jump="
+};
+
+// Parameters potentially vulnerable to Remote Code Execution (RCE) attacks
+String[] rceParams = {
+    "cmd=", "exec=", "command=", "execute=", "ping=", "query=", "jump=", "code=", 
+    "reg=", "do=", "func=", "arg=", "option=", "load=", "process=", "step=", 
+    "read=", "feature=", "exe=", "module=", "payload=", "run=", "print=", 
+    "script=", "batch=", "task=", "job=", "shell=", "util=", "app="
+};
+
+// The logic to check request parameters against the lists of vulnerable parameters
+if (requestResponse.request().url() != null) {
+    String requestUrl = requestResponse.request().url();
+    String requestBody = requestResponse.request().bodyToString();
+
+    String[][] allParams = {ssrfParams, sqlParams, xssParams, lfiParams, orParams, rceParams};
+
+    // Extract the query string from the URL
+    int queryStart = requestUrl.indexOf("?");
+    String queryString = "";
+    if (queryStart != -1 && queryStart < requestUrl.length() - 1) {
+        queryString = requestUrl.substring(queryStart + 1);
+    }
+
+    // Split all input parameters from the query string and request body
+    String[] allInputParams = (queryString + "&" + requestBody).split("&");
+
+    // Check each parameter against the lists of vulnerable parameters
+    for (String inputParam : allInputParams) {
+        for (String[] paramArray : allParams) {
+            for (String param : paramArray) {
+                if (inputParam.startsWith(param)) {
+                    return true; 
+                }
+            }
+        }
+    }
+}
+
+return false;
