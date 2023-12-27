@@ -1,0 +1,48 @@
+// Import the necessary Burp Suite classes
+import burp.*;
+
+public class BurpExtender implements IBurpExtender {
+    @Override
+    public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
+        // Register a Bambda to find GraphQL endpoints
+        callbacks.registerBambda("Find GraphQL Endpoints", requestResponse -> {
+            // Initialize the request object from the current requestResponse
+            var req = requestResponse.request();
+
+            // Return false if the request does not have any parameters
+            if(!req.hasParameters()) {
+                return false;
+            }
+
+            // Define the types of HTTP parameters to check
+            var types = new HttpParameterType[]{
+                HttpParameterType.JSON, HttpParameterType.BODY, HttpParameterType.URL
+            };
+
+            // Iterate over the defined types of parameters
+            for(HttpParameterType type: types) {
+                // Check if there is a parameter named "query" for the current type
+                if(req.hasParameter("query", type)) {
+                    // Retrieve the value of the "query" parameter
+                    var value = req.parameterValue("query", type);
+
+                    // Check the structure of the parameter's value
+                    // For JSON parameters, look for newline characters
+                    // For other parameter types, look for URL-encoded newline
+                    if(type == HttpParameterType.JSON) {
+                        if(value.contains("\\n")) {
+                            return true; // GraphQL query detected
+                        }
+                    } else {
+                        if(value.toLowerCase().contains("%0a")) {
+                            return true; // GraphQL query detected
+                        }
+                    }
+                }
+            }
+
+            // Return false if no GraphQL-like pattern is found
+            return false;
+        });
+    }
+}
