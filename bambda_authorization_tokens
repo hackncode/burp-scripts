@@ -1,0 +1,52 @@
+// Import necessary Burp Suite classes
+import burp.*;
+
+public class BurpExtender implements IBurpExtender {
+    @Override
+    public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
+        // Register a Bambda to filter Authorization tokens
+        callbacks.registerBambda("Filter Authorization Tokens", requestResponse -> {
+            // Check if the requestResponse object has a response
+            if( !requestResponse.hasResponse() ) {
+                return false;
+            }
+
+            // Get the request object from requestResponse
+            var req = requestResponse.request();
+
+            // Check if the request has an 'Authorization' header
+            if( req.hasHeader("Authorization") ) {
+                // Get the value of the 'Authorization' header
+                var authHeader = req.headerValue("Authorization");
+
+                // Check if the Authorization header starts with 'Bearer'
+                if( authHeader.startsWith("Bearer") ) {
+                    // Extract the token part from the Authorization header
+                    String possible_token = authHeader.split(" ")[1].trim();
+                    
+                    // Check if the token is not null and contains a dot (indicating a JWT)
+                    if( possible_token != null && possible_token.contains(".") ) {
+                        // Split the JWT and get the header part
+                        String jwt_header = possible_token.split("\\.")[0];
+                        
+                        // Check if the JWT header is not null
+                        if( jwt_header != null ) {
+                            // Decode the JWT header from Base64
+                            String decoded_header = utilities().base64Utils().decode(jwt_header).toString();
+
+                            // Extract the 'alg' field from the decoded JWT header
+                            String algo = decoded_header.split("\"alg\":\"")[1];
+
+                            // Check if the algorithm starts with 'HS512'
+                            if( algo.toUpperCase().startsWith("HS512") )
+                                return true; // Return true for HS512 tokens
+                        }  
+                    }
+                }
+            }
+
+            // Return false if no matching Authorization token is found
+            return false;
+        });
+    }
+}
