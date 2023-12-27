@@ -1,0 +1,52 @@
+// Import the necessary Burp Suite classes and Java's regex package
+import burp.*;
+import java.util.regex.Pattern;
+
+public class BurpExtender implements IBurpExtender {
+    @Override
+    public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
+        // Register a Bambda to find JSONP endpoints
+        callbacks.registerBambda("Find JSONP for CSP Bypass", requestResponse -> {
+            // Get the request and response objects
+            var req = requestResponse.request();
+            var res = requestResponse.response();
+
+            // Compile a regex to identify potential callback parameter values
+            var paramRegex = Pattern.compile("^[a-zA-Z][.\\w]{4,}$");
+
+            // Check if the response is null or has an empty body, return false if so
+            if(res == null || res.body().length() == 0) return false;
+
+            // Return false if the request does not have any parameters
+            if(!req.hasParameters()) return false;
+
+            // Convert the response body to a string for analysis
+            var body = res.bodyToString().trim();
+
+            // Get all the parameters from the request
+            var params = req.parameters();
+
+            // Iterate through each parameter
+            for(var param: params) {
+                var value = param.value();
+
+                // Continue only if the parameter is in the URL
+                if(param.type() != HttpParameterType.URL) continue;
+
+                // Check if the parameter value matches the callback pattern
+                if(paramRegex.matcher(value).find()) {
+                    // Patterns to identify callback in response
+                    var start = "(?:^|[^\\w'\".])";
+                    var end = "\\s*[(]";
+                    var callbackRegex = Pattern.compile(start+Pattern.quote(value)+end);
+
+                    // Check if the callback is reflected in the response with an opening parenthesis
+                    if(callbackRegex.matcher(body).find()) return true;
+                }
+            }
+
+            // Return false if no JSONP endpoint pattern is found
+            return false;
+        });
+    }
+}
